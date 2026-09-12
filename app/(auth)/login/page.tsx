@@ -31,7 +31,7 @@ export default function LoginPage() {
       }
 
       router.push('/dashboard');
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -39,45 +39,47 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/10 border-white/20 backdrop-blur-md">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-white">Welcome Back, Adventurer</CardTitle>
-          <CardDescription className="text-gray-300">Sign in to continue your quest</CardDescription>
+          <CardTitle>Sign in</CardTitle>
+          <CardDescription>Continue where you left off</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Email</label>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                className="input w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
+                placeholder="you@example.com"
+                className="w-full h-9 rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Password</label>
+              <label className="block text-xs font-medium text-foreground mb-1.5">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="input w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
+                className="w-full h-9 rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 required
               />
             </div>
-            {error && <div className="text-red-400 text-sm">{error}</div>}
-            <Button type="submit" disabled={loading} className="w-full bg-purple-600 hover:bg-purple-700">
-              {loading ? 'Signing in...' : 'Sign In'}
+            {error && (
+              <p className="text-xs text-destructive">{error}</p>
+            )}
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? 'Signing in…' : 'Sign in'}
             </Button>
           </form>
-          <p className="text-center text-gray-300 text-sm mt-4">
-            No account?{' '}
-            <Link href="/auth/signup" className="text-amber-400 hover:underline">
-              Create one
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            Don't have an account?{' '}
+            <Link href="/auth/signup" className="text-primary hover:underline">
+              Sign up
             </Link>
           </p>
         </CardContent>

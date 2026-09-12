@@ -1,30 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createQuest, completeQuest, deleteQuest } from '@/lib/actions/quests';
-import { Quest, Character } from '@/types';
-import { motion } from 'framer-motion';
-import { Difficulty, Attribute } from '@/types';
+import { Quest, Character, Difficulty, Attribute } from '@/types';
 import { RewardAnimation, LevelUpAnimation } from '@/components/game/animations';
-import { getLevelFromXp, getXpProgress, checkLevelUp } from '@/lib/rpg/progression';
+import { getLevelFromXp } from '@/lib/rpg/progression';
 
-const DIFFICULTIES: Record<Difficulty, { label: string; color: string; icon: string }> = {
-  trivial: { label: 'Trivial', color: 'bg-gray-500', icon: '⚪' },
-  easy: { label: 'Easy', color: 'bg-green-500', icon: '🟢' },
-  medium: { label: 'Medium', color: 'bg-yellow-500', icon: '🟡' },
-  hard: { label: 'Hard', color: 'bg-red-500', icon: '🔴' },
-  epic: { label: 'Epic', color: 'bg-purple-500', icon: '🟣' },
+const DIFFICULTIES: Record<Difficulty, { label: string }> = {
+  trivial: { label: 'Trivial' },
+  easy: { label: 'Easy' },
+  medium: { label: 'Medium' },
+  hard: { label: 'Hard' },
+  epic: { label: 'Epic' },
 };
 
-const ATTRIBUTES: Record<Attribute, { label: string; icon: string; color: string }> = {
-  intellect: { label: 'Intellect', icon: '🧠', color: 'text-purple-400' },
-  strength: { label: 'Strength', icon: '💪', color: 'text-red-400' },
-  focus: { label: 'Focus', icon: '🎯', color: 'text-cyan-400' },
-  vitality: { label: 'Vitality', icon: '❤️', color: 'text-emerald-400' },
+const ATTRIBUTES: Record<Attribute, { label: string }> = {
+  intellect: { label: 'Intellect' },
+  strength: { label: 'Strength' },
+  focus: { label: 'Focus' },
+  vitality: { label: 'Vitality' },
 };
 
 export default function QuestsPage() {
@@ -48,7 +45,7 @@ export default function QuestsPage() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 30000); // Refresh every 30s
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -107,7 +104,6 @@ export default function QuestsPage() {
     try {
       const result = await completeQuest(quest.id);
 
-      // Show animations
       setRewardData({
         xp: result.xpEarned,
         gold: result.goldEarned,
@@ -116,7 +112,6 @@ export default function QuestsPage() {
       });
       setShowRewardAnimation(true);
 
-      // Check for level up
       const oldLevel = getLevelFromXp(character.total_xp);
       const newCharLevel = getLevelFromXp(character.total_xp + result.xpEarned);
 
@@ -127,7 +122,6 @@ export default function QuestsPage() {
         }, 600);
       }
 
-      // Refresh after animation
       setTimeout(() => {
         setShowRewardAnimation(false);
         setShowLevelUpAnimation(false);
@@ -152,213 +146,199 @@ export default function QuestsPage() {
   const completedQuests = quests.filter((q) => q.is_completed);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 sm:p-8">
-      <div className="container-safe">
-        {/* Animations */}
-        <RewardAnimation
-          isVisible={showRewardAnimation}
-          xp={rewardData.xp}
-          gold={rewardData.gold}
-          attributeXp={rewardData.attrXp}
-          attributeName={ATTRIBUTES[rewardData.attr].label}
-        />
-        <LevelUpAnimation isVisible={showLevelUpAnimation} newLevel={newLevel} />
+    <div className="container-safe py-6 sm:py-8 max-w-3xl space-y-6">
+      <RewardAnimation
+        isVisible={showRewardAnimation}
+        xp={rewardData.xp}
+        gold={rewardData.gold}
+        attributeXp={rewardData.attrXp}
+        attributeName={ATTRIBUTES[rewardData.attr]?.label || ''}
+      />
+      <LevelUpAnimation isVisible={showLevelUpAnimation} newLevel={newLevel} />
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-white">📜 Quests</h1>
-          <div className="flex gap-4">
-            <Link href="/dashboard">
-              <Button variant="outline" className="text-white border-white/30 hover:bg-white/10">
-                Dashboard
-              </Button>
-            </Link>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Quests</h1>
+          <p className="text-xs text-muted-foreground">
+            {activeQuests.length} active · {completedQuests.length} completed
+          </p>
         </div>
-
-        {error && <div className="bg-red-500/20 border border-red-500/50 text-red-300 p-4 rounded-lg mb-6">{error}</div>}
-
-        {/* Create Quest Form */}
-        {showCreateForm && (
-          <Card className="bg-white/10 border-white/20 backdrop-blur-md text-white mb-8">
-            <CardHeader>
-              <CardTitle>New Quest</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateQuest} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Quest Title</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Complete your daily workout"
-                    className="input w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Description (optional)</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Add details about this quest"
-                    className="input w-full bg-white/10 border-white/20 text-white placeholder-gray-400 h-24 resize-none"
-                  />
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Attribute</label>
-                    <select
-                      value={formData.attribute}
-                      onChange={(e) => setFormData({ ...formData, attribute: e.target.value as Attribute })}
-                      className="input w-full bg-white/10 border-white/20 text-white"
-                    >
-                      {(Object.entries(ATTRIBUTES) as [Attribute, any][]).map(([key, { label }]) => (
-                        <option key={key} value={key}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Difficulty</label>
-                    <select
-                      value={formData.difficulty}
-                      onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as Difficulty })}
-                      className="input w-full bg-white/10 border-white/20 text-white"
-                    >
-                      {(Object.entries(DIFFICULTIES) as [Difficulty, any][]).map(([key, { label }]) => (
-                        <option key={key} value={key}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <Button type="submit" disabled={submitting} className="flex-1 bg-purple-600 hover:bg-purple-700">
-                    {submitting ? 'Creating...' : 'Create Quest'}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                    variant="outline"
-                    className="flex-1 text-white border-white/30 hover:bg-white/10"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
         {!showCreateForm && (
-          <Button onClick={() => setShowCreateForm(true)} className="mb-8 bg-amber-600 hover:bg-amber-700">
-            + New Quest
+          <Button size="sm" onClick={() => setShowCreateForm(true)}>
+            New quest
           </Button>
         )}
+      </div>
 
-        {loading ? (
-          <div className="text-white text-center py-12">Loading quests...</div>
-        ) : (
-          <>
-            {/* Active Quests */}
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold text-white mb-6">Active Quests ({activeQuests.length})</h2>
-              {activeQuests.length === 0 ? (
-                <Card className="bg-white/10 border-white/20 backdrop-blur-md text-white">
-                  <CardContent className="py-12 text-center">
-                    <p className="text-gray-300">No active quests. Create one to begin!</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {activeQuests.map((quest, idx) => (
-                    <motion.div
-                      key={quest.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                    >
-                      <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-all text-white">
-                        <CardContent className="py-6">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <h3 className="text-lg font-semibold mb-2">{quest.title}</h3>
-                              {quest.description && <p className="text-gray-300 text-sm mb-3">{quest.description}</p>}
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <span className={`text-sm ${ATTRIBUTES[quest.attribute as Attribute]?.color}`}>
-                                  {ATTRIBUTES[quest.attribute as Attribute]?.icon}{' '}
-                                  {ATTRIBUTES[quest.attribute as Attribute]?.label}
-                                </span>
-                                <span className="text-sm text-amber-400">
-                                  {DIFFICULTIES[quest.difficulty as Difficulty]?.icon}{' '}
-                                  {DIFFICULTIES[quest.difficulty as Difficulty]?.label}
-                                </span>
-                                <span className="text-sm text-green-400">+{quest.xp_reward} XP</span>
-                                <span className="text-sm text-yellow-400">+{quest.gold_reward} Gold</span>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              <Button
-                                onClick={() => handleCompleteQuest(quest)}
-                                disabled={completingId === quest.id}
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                {completingId === quest.id ? '⏳' : '✓'} Complete
-                              </Button>
-                              <Button
-                                onClick={() => handleDeleteQuest(quest.id)}
-                                size="sm"
-                                variant="outline"
-                                className="text-red-400 border-red-400/50 hover:bg-red-400/10"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </div>
+      {error && (
+        <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3">
+          {error}
+        </p>
+      )}
 
-            {/* Completed Quests */}
-            {completedQuests.length > 0 && (
+      {/* Create Quest Form */}
+      {showCreateForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>New quest</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreateQuest} className="space-y-4">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-6">Completed ({completedQuests.length})</h2>
-                <div className="space-y-4 opacity-60">
-                  {completedQuests.slice(0, 5).map((quest) => (
-                    <Card key={quest.id} className="bg-white/10 border-white/20 backdrop-blur-md text-white">
-                      <CardContent className="py-4">
-                        <div className="flex items-center gap-4">
-                          <span className="text-green-400">✓</span>
-                          <div className="flex-1">
-                            <h4 className="font-medium">{quest.title}</h4>
-                            <p className="text-xs text-gray-400">
-                              Completed {new Date(quest.completed_at!).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <span className="text-sm text-amber-400">+{quest.xp_reward} XP</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <label className="block text-xs font-medium text-foreground mb-1">Title</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Read chapter 4 of system design book"
+                  className="w-full h-9 rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-foreground mb-1">Description (optional)</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Notes, steps, or acceptance criteria"
+                  className="w-full h-20 rounded-md border border-input bg-card p-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Attribute</label>
+                  <select
+                    value={formData.attribute}
+                    onChange={(e) => setFormData({ ...formData, attribute: e.target.value as Attribute })}
+                    className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {Object.entries(ATTRIBUTES).map(([key, { label }]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Difficulty</label>
+                  <select
+                    value={formData.difficulty}
+                    onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as Difficulty })}
+                    className="w-full h-9 rounded-md border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {Object.entries(DIFFICULTIES).map(([key, { label }]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCreateForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" disabled={submitting}>
+                  {submitting ? 'Creating…' : 'Create quest'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {loading ? (
+        <div className="animate-pulse space-y-2">
+          <div className="h-16 bg-secondary rounded-lg" />
+          <div className="h-16 bg-secondary rounded-lg" />
+          <div className="h-16 bg-secondary rounded-lg" />
+        </div>
+      ) : (
+        <>
+          {/* Active Quests */}
+          {activeQuests.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <p className="text-sm font-medium text-foreground mb-1">All clear</p>
+                <p className="text-xs text-muted-foreground mb-4">You have no active quests right now.</p>
+                {!showCreateForm && (
+                  <Button size="sm" onClick={() => setShowCreateForm(true)}>
+                    Create a quest
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {activeQuests.map((quest) => (
+                <Card key={quest.id} className="hover:border-foreground/20 transition-colors">
+                  <CardContent className="p-4 flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{quest.title}</p>
+                      {quest.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{quest.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2 text-[11px] text-muted-foreground">
+                        <span className="capitalize">{quest.attribute}</span>
+                        <span>·</span>
+                        <span className="capitalize">{quest.difficulty}</span>
+                        <span>·</span>
+                        <span className="text-xp font-medium">+{quest.xp_reward} XP</span>
+                        <span>·</span>
+                        <span className="text-gold font-medium">+{quest.gold_reward}g</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleCompleteQuest(quest)}
+                        disabled={completingId === quest.id}
+                      >
+                        {completingId === quest.id ? 'Saving…' : 'Done'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDeleteQuest(quest.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Completed Quests */}
+          {completedQuests.length > 0 && (
+            <div className="pt-6 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Completed
+              </p>
+              <div className="space-y-1">
+                {completedQuests.slice(0, 5).map((quest) => (
+                  <div
+                    key={quest.id}
+                    className="flex items-center justify-between py-2 text-xs text-muted-foreground"
+                  >
+                    <span className="line-through truncate mr-4">{quest.title}</span>
+                    <span className="shrink-0 text-xp">+{quest.xp_reward} XP</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

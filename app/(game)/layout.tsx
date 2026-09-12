@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getUserFromSession } from '@/lib/supabase/server';
+import GameNavShell from '@/components/game/nav-shell';
 
 export default async function GameLayout({
   children,
@@ -12,5 +13,5 @@ export default async function GameLayout({
     redirect('/auth/login');
   }
 
-  return <>{children}</>;
+  return <GameNavShell>{children}</GameNavShell>;
 }

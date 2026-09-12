@@ -2,46 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 8%;
-    --primary: 258 90% 66%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 38 92% 50%;
-    --secondary-foreground: 0 0% 8%;
-    --accent: 38 92% 50%;
-    --border: 0 0% 89%;
-    --input: 0 0% 96%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --background: 30 6% 98%;
+    --foreground: 24 10% 10%;
     --card: 0 0% 100%;
+    --card-foreground: 24 10% 10%;
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 6% 96%;
+    --secondary-foreground: 24 10% 10%;
+    --muted: 30 6% 96%;
+    --muted-foreground: 24 5% 45%;
+    --accent: 263 70% 96%;
+    --accent-foreground: 263 70% 50%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 24 6% 91%;
+    --input: 24 6% 91%;
+    --ring: 263 70% 50%;
+    --radius: 0.5rem;
+
+    /* Semantic tokens */
+    --xp: 221 83% 53%;
+    --gold: 32 95% 44%;
+    --success: 142 71% 45%;
+    --streak: 24 95% 53%;
   }
 
-  [data-theme='dark'] {
-    --background: 0 0% 8%;
-    --foreground: 0 0% 96%;
-    --card: 0 0% 12%;
-    --muted: 0 0% 20%;
-    --border: 0 0% 20%;
-    --input: 0 0% 16%;
+  * {
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer components {
   .container-safe {
-    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-5xl px-4 sm:px-6;
   }
+}
 
-  .card {
-    @apply rounded-lg border border-border bg-card p-6 shadow-sm;
-  }
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
 
-  .input {
-    @apply rounded-lg border border-border bg-input px-4 py-2 text-foreground placeholder-muted-foreground transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

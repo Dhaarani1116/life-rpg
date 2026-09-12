@@ -1,89 +1,62 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
       {/* Navigation */}
-      <nav className="border-b border-white/10 backdrop-blur-md">
-        <div className="container-safe py-4 flex items-center justify-between">
-          <div className="text-2xl font-bold">⚔️ Life RPG</div>
-          <Link href="/auth/login">
-            <Button variant="outline" className="text-white border-white/30 hover:bg-white/10">
-              Sign In
-            </Button>
-          </Link>
+      <header className="border-b border-border">
+        <div className="container-safe flex h-14 items-center justify-between">
+          <span className="text-base font-semibold">Life RPG</span>
+          <div className="flex items-center gap-3">
+            <Link href="/auth/login">
+              <Button variant="ghost" size="sm">Sign in</Button>
+            </Link>
+            <Link href="/auth/signup">
+              <Button size="sm">Get started</Button>
+            </Link>
+          </div>
         </div>
-      </nav>
+      </header>
 
       {/* Hero */}
-      <section className="container-safe py-20 sm:py-32 text-center">
-        <h1 className="text-5xl sm:text-7xl font-bold mb-6 leading-tight">
-          Turn Your Life Into an Adventure
+      <main className="container-safe py-20 sm:py-28 max-w-2xl text-center">
+        <p className="text-sm font-medium text-primary mb-3">Productivity meets progression</p>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-4">
+          Turn your daily tasks into experience points.
         </h1>
-        <p className="text-xl sm:text-2xl text-gray-300 mb-8 max-w-2xl mx-auto">
-          Complete real-world tasks as quests. Level up your character. Unlock rewards.
-          <br />
-          <span className="text-amber-400">Your life is an RPG.</span>
+        <p className="text-base sm:text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
+          Create tasks, build streaks, and level up your character as you get things done in the real world.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link href="/auth/signup">
-            <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white">
-              Start Your Adventure
-            </Button>
+            <Button size="lg" className="w-full sm:w-auto">Start today</Button>
           </Link>
           <Link href="/auth/login">
-            <Button size="lg" variant="outline" className="text-white border-white/30 hover:bg-white/10">
-              Already Have an Account?
-            </Button>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto">Sign in</Button>
           </Link>
         </div>
-      </section>
 
-      {/* Features */}
-      <section className="container-safe py-20">
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: '🎮',
-              title: 'Create Quests',
-              description: 'Turn your daily tasks into epic quests with rewards and difficulty levels.',
-            },
-            {
-              icon: '📈',
-              title: 'Level Up',
-              description: 'Complete quests to gain XP and advance through non-linear progression.',
-            },
-            {
-              icon: '⚡',
-              title: 'Earn Rewards',
-              description: 'Build streaks, earn gold, and unlock special relics from the shop.',
-            },
-          ].map((feature, i) => (
-            <div key={i} className="card bg-white/10 border-white/20 backdrop-blur-sm">
-              <div className="text-4xl mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-300">{feature.description}</p>
-            </div>
-          ))}
+        {/* Feature list */}
+        <div className="mt-20 grid sm:grid-cols-3 gap-6 text-left border-t border-border pt-12">
+          <div>
+            <p className="text-sm font-semibold text-foreground mb-1">Quests</p>
+            <p className="text-xs text-muted-foreground">Break goals into difficulty-rated tasks tied to real attributes.</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground mb-1">Progression</p>
+            <p className="text-xs text-muted-foreground">Earn XP, level up on an escalating curve, and track streaks.</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground mb-1">Rewards</p>
+            <p className="text-xs text-muted-foreground">Earn gold from completions to unlock relics in the shop.</p>
+          </div>
         </div>
-      </section>
-
-      {/* CTA */}
-      <section className="container-safe py-20 text-center">
-        <h2 className="text-4xl font-bold mb-6">Ready to Begin?</h2>
-        <p className="text-gray-300 mb-8">Your adventure starts now.</p>
-        <Link href="/auth/signup">
-          <Button size="lg" className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
-            Create Your Character
-          </Button>
-        </Link>
-      </section>
+      </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-8 text-center text-gray-400 text-sm">
-        <p>Life RPG © 2026 • Made for the web hackathon</p>
+      <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+        <p>Life RPG</p>
       </footer>
     </div>
   );
