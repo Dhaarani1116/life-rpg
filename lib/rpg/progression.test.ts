@@ -5,6 +5,7 @@ import {
   getXpProgress,
   getQuestXpReward,
   checkLevelUp,
+  calculateStreak,
 } from './progression';
 
 describe('RPG Progression Engine', () => {
@@ -76,9 +77,92 @@ describe('RPG Progression Engine', () => {
     });
 
     it('should not detect false level up', () => {
+      // totalXpForLevel(2) = xpForLevel(1) = floor(100*1^1.5) = 100
+      // So 99 XP stays at level 1, no level-up occurs
       const xpBefore = 50;
-      const xpAfter = 100;
+      const xpAfter = 99;
       expect(checkLevelUp(xpBefore, xpAfter)).toBe(false);
+    });
+  });
+
+  describe('calculateStreak', () => {
+    // Authoritative rule:
+    // - First completion (no lastActiveDate): streak = 1
+    // - Same-day completion: streak unchanged
+    // - Next consecutive day: streak + 1
+    // - One or more days missed: reset to 1
+
+    it('first completion returns streak 1', () => {
+      const result = calculateStreak(null, '2024-01-01', 0, 0);
+      expect(result.current).toBe(1);
+      expect(result.longest).toBe(1);
+    });
+
+    it('same-day completion returns streak unchanged', () => {
+      // Character already completed a quest today (current_streak=3, last_active=today)
+      const result = calculateStreak('2024-01-03', '2024-01-03', 3, 5);
+      expect(result.current).toBe(3);
+      expect(result.longest).toBe(5);
+    });
+
+    it('consecutive-day completion increments streak', () => {
+      // Last active was yesterday, streak was 2
+      const result = calculateStreak('2024-01-02', '2024-01-03', 2, 2);
+      expect(result.current).toBe(3);
+      expect(result.longest).toBe(3);
+    });
+
+    it('one-day gap resets streak to 1', () => {
+      // Last active was 2 days ago (missed one day)
+      const result = calculateStreak('2024-01-01', '2024-01-03', 5, 10);
+      expect(result.current).toBe(1);
+    });
+
+    it('multi-day gap resets streak to 1', () => {
+      // Last active was a week ago
+      const result = calculateStreak('2024-01-01', '2024-01-08', 7, 7);
+      expect(result.current).toBe(1);
+    });
+
+    it('longest streak is preserved after a break', () => {
+      // Had a longest streak of 10, now breaking with streak 1
+      const result = calculateStreak('2024-01-01', '2024-01-08', 7, 10);
+      expect(result.current).toBe(1);
+      expect(result.longest).toBe(10);
+    });
+
+    it('longest streak is updated when current exceeds it', () => {
+      // Current streak of 4 surpasses longest of 3
+      const result = calculateStreak('2024-01-03', '2024-01-04', 4, 3);
+      expect(result.current).toBe(5);
+      expect(result.longest).toBe(5);
+    });
+
+    it('Monday through Wednesday then Friday scenario', () => {
+      // Monday: first completion (streak=1)
+      const mon = calculateStreak(null, '2024-01-01', 0, 0);
+      expect(mon.current).toBe(1);
+      expect(mon.longest).toBe(1);
+
+      // Monday again (second quest same day)
+      const monAgain = calculateStreak('2024-01-01', '2024-01-01', mon.current, mon.longest);
+      expect(monAgain.current).toBe(1);
+      expect(monAgain.longest).toBe(1);
+
+      // Tuesday
+      const tue = calculateStreak('2024-01-01', '2024-01-02', monAgain.current, monAgain.longest);
+      expect(tue.current).toBe(2);
+      expect(tue.longest).toBe(2);
+
+      // Wednesday
+      const wed = calculateStreak('2024-01-02', '2024-01-03', tue.current, tue.longest);
+      expect(wed.current).toBe(3);
+      expect(wed.longest).toBe(3);
+
+      // Thursday missed — Friday completion
+      const fri = calculateStreak('2024-01-03', '2024-01-05', wed.current, wed.longest);
+      expect(fri.current).toBe(1);
+      expect(fri.longest).toBe(3); // longest preserved
     });
   });
 });

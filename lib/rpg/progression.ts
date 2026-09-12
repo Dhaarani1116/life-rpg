@@ -122,56 +122,23 @@ export function checkLevelUp(
 export function calculateStreak(
   lastActiveDate: string | null,
   currentDate: string,
-  allActivityDates: string[]
+  currentStreak: number,
+  longestStreak: number
 ): { current: number; longest: number } {
-  const current = new Date(currentDate);
-  const sorted = allActivityDates
-    .map(d => new Date(d))
-    .sort((a, b) => a.getTime() - b.getTime());
-
-  if (sorted.length === 0) {
-    return { current: 0, longest: 0 };
+  if (!lastActiveDate) {
+    return { current: 1, longest: Math.max(longestStreak, 1) };
   }
 
-  let currentStreak = 0;
-  let longestStreak = 0;
-  let expectedDate = new Date(sorted[sorted.length - 1]);
+  const current = new Date(currentDate).getTime();
+  const last = new Date(lastActiveDate).getTime();
+  const daysDiff = Math.floor((current - last) / (1000 * 60 * 60 * 24));
 
-  // Work backwards from most recent
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const date = sorted[i];
-    const daysDiff = Math.floor(
-      (expectedDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (daysDiff === 0) {
-      currentStreak++;
-      longestStreak = Math.max(longestStreak, currentStreak);
-      expectedDate.setDate(expectedDate.getDate() - 1);
-    } else if (daysDiff === 1) {
-      currentStreak++;
-      longestStreak = Math.max(longestStreak, currentStreak);
-      expectedDate = new Date(date);
-      expectedDate.setDate(expectedDate.getDate() - 1);
-    } else {
-      currentStreak = 1;
-      longestStreak = Math.max(longestStreak, currentStreak);
-      expectedDate = new Date(date);
-      expectedDate.setDate(expectedDate.getDate() - 1);
-    }
+  if (daysDiff === 0) {
+    return { current: currentStreak, longest: longestStreak };
+  } else if (daysDiff === 1) {
+    const newCurrent = currentStreak + 1;
+    return { current: newCurrent, longest: Math.max(longestStreak, newCurrent) };
+  } else {
+    return { current: 1, longest: Math.max(longestStreak, 1) };
   }
-
-  // Check if streak was broken
-  const daysSinceLastActivity = lastActiveDate
-    ? Math.floor(
-        (current.getTime() - new Date(lastActiveDate).getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
-    : 0;
-
-  if (daysSinceLastActivity > 1) {
-    currentStreak = 0;
-  }
-
-  return { current: currentStreak, longest: longestStreak };
 }

@@ -2,9 +2,9 @@
 
 import { getUserFromSession, getServerSupabaseClient } from '@/lib/supabase/server';
 import { createQuestSchema } from '@/lib/validators/quests';
-import { getQuestXpReward, getQuestGoldReward, getAttributeXpReward } from '@/lib/rpg/progression';
+import { getQuestXpReward, getQuestGoldReward } from '@/lib/rpg/progression';
 import { revalidatePath } from 'next/cache';
-import { Difficulty, Attribute } from '@/types';
+import { Difficulty } from '@/types';
 
 /**
  * Create a new quest
@@ -44,7 +44,8 @@ export async function createQuest(input: unknown) {
 
 /**
  * Complete a quest and award rewards
- * Server-side calculation ensures security
+ * Server-side calculation ensures security.
+ * Uses a single RPC call for transaction safety.
  */
 export async function completeQuest(questId: string) {
   const user = await getUserFromSession();
@@ -55,108 +56,23 @@ export async function completeQuest(questId: string) {
 
   const supabase = await getServerSupabaseClient();
 
-  // Fetch the quest
-  const { data: quest, error: questError } = await supabase
-    .from('quests')
-    .select('*')
-    .eq('id', questId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (questError || !quest) {
-    throw new Error('Quest not found');
-  }
-
-  if (quest.is_completed) {
-    throw new Error('Quest already completed');
-  }
-
-  // Fetch character and streak info
-  const { data: character } = await supabase
-    .from('characters')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!character) {
-    throw new Error('Character not found');
-  }
-
-  // Get activity for streak calculation
-  const { data: activities } = await supabase
-    .from('daily_activity')
-    .select('date')
-    .eq('user_id', user.id)
-    .order('date', { ascending: false });
-
-  const currentStreak = character.current_streak || 0;
-  const xpReward = getQuestXpReward(quest.difficulty as Difficulty, currentStreak);
-  const attributeXpReward = getAttributeXpReward(xpReward);
-
-  // Update quest completion
-  const { error: completeError } = await supabase
-    .from('quests')
-    .update({
-      is_completed: true,
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', questId);
-
-  if (completeError) {
-    throw new Error('Failed to complete quest');
-  }
-
-  // Record completion
-  await supabase.from('quest_completions').insert({
-    quest_id: questId,
-    user_id: user.id,
-    xp_earned: xpReward,
-    gold_earned: quest.gold_reward,
-    attribute_xp_earned: attributeXpReward,
+  // The database RPC is now the source of truth for rewards and security.
+  // It relies on auth.uid() internally and calculates all rewards itself.
+  const { data, error: rpcError } = await supabase.rpc('commit_quest_completion', {
+    p_quest_id: questId,
   });
 
-  // Update character stats
-  const newTotalXp = character.total_xp + xpReward;
-  const newGold = character.gold + quest.gold_reward;
-
-  await supabase
-    .from('characters')
-    .update({
-      total_xp: newTotalXp,
-      gold: newGold,
-    })
-    .eq('id', character.id);
-
-  // Update attribute XP
-  await supabase
-    .from('character_attributes')
-    .update({
-      xp: supabase.rpc('increment_xp', {
-        attr_xp: attributeXpReward,
-      }),
-    })
-    .eq('character_id', character.id)
-    .eq('attribute', quest.attribute);
-
-  // Update daily activity and streak
-  const today = new Date().toISOString().split('T')[0];
-
-  // Upsert daily activity record
-  const { error: activityError } = await supabase.from('daily_activity').upsert(
-    {
-      user_id: user.id,
-      date: today,
-    },
-    { onConflict: 'user_id,date' }
-  );
+  if (rpcError) {
+    throw new Error(`Failed to complete quest: ${rpcError.message}`);
+  }
 
   revalidatePath('/dashboard');
   revalidatePath('/quests');
 
   return {
-    xpEarned: xpReward,
-    goldEarned: quest.gold_reward,
-    attributeXpEarned: attributeXpReward,
+    xpEarned: data.xp_earned,
+    goldEarned: data.gold_earned,
+    attributeXpEarned: data.attribute_xp_earned,
   };
 }
 
