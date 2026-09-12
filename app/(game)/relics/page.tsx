@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { RelicCard } from '@/components/game/relic-card';
+import RelicPurchaseBurst from '@/components/game/relic-purchase-burst';
 import { Character, InventoryItem, Relic } from '@/types';
 
 const RARITY_BADGES: Record<string, { label: string; class: string }> = {
@@ -72,25 +73,15 @@ export default function RelicsPage() {
     setError(null);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      await supabase
-        .from('characters')
-        .update({ gold: character.gold - relic.cost })
-        .eq('id', character.id);
-
-      await supabase.from('inventory').insert({
-        user_id: user.id,
-        relic_id: relic.id,
-      });
-
-      setPurchaseSuccess(relic.name);
-      setTimeout(() => setPurchaseSuccess(null), 2500);
-      await loadData();
+      const { data, error } = await supabase.rpc('purchase_relic', { p_relic_id: relic.id });
+      if (error) {
+        setError(error.message || 'Failed to purchase item');
+      } else {
+        const result = data[0];
+        setPurchaseSuccess(result.relic_name);
+        setTimeout(() => setPurchaseSuccess(null), 2500);
+        await loadData();
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to purchase item');
     } finally {
@@ -103,8 +94,8 @@ export default function RelicsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Rewards shop</h1>
-          <p className="text-xs text-muted-foreground">Spend earned gold on relics and upgrades</p>
+          <h1 className="text-2xl font-orbitron font-semibold text-foreground">Relic Vault</h1>
+          <p className="text-sm text-muted-foreground">Spend your gold on powerful relics</p>
         </div>
         {character && (
           <div className="text-right">
@@ -121,9 +112,7 @@ export default function RelicsPage() {
       )}
 
       {purchaseSuccess && (
-        <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-3">
-          Acquired {purchaseSuccess}
-        </p>
+        <RelicPurchaseBurst name={purchaseSuccess} />
       )}
 
       {/* Inventory */}
@@ -166,42 +155,17 @@ export default function RelicsPage() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {relics.map((relic) => {
-              const badge = RARITY_BADGES[relic.rarity] || RARITY_BADGES.common;
-              const isAffordable = character && character.gold >= relic.cost;
+              const isAffordable = (character?.gold ?? 0) >= relic.cost;
               const isOwned = inventory.some((i) => i.relic_id === relic.id);
-
               return (
-                <Card key={relic.id} className="flex flex-col justify-between">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{relic.name}</p>
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium mt-1 ${badge.class}`}>
-                          {badge.label}
-                        </span>
-                      </div>
-                      <span className="text-xs font-semibold text-gold shrink-0">{relic.cost}g</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{relic.description}</p>
-                    <div>
-                      {isOwned ? (
-                        <Button size="sm" variant="ghost" disabled className="w-full text-xs">
-                          Owned
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant={isAffordable ? 'default' : 'outline'}
-                          disabled={!isAffordable || purchasing === relic.id}
-                          onClick={() => handlePurchaseRelic(relic)}
-                          className="w-full text-xs"
-                        >
-                          {purchasing === relic.id ? 'Purchasing…' : isAffordable ? 'Buy' : 'Not enough gold'}
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                <RelicCard
+                  key={relic.id}
+                  relic={relic}
+                  isOwned={isOwned}
+                  isAffordable={isAffordable}
+                  purchasingId={purchasing}
+                  onPurchase={handlePurchaseRelic}
+                />
               );
             })}
           </div>
