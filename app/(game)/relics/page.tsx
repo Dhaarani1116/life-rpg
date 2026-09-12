@@ -6,13 +6,14 @@ import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Character, InventoryItem, Relic } from '@/types';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const RARITY_COLORS: Record<string, string> = {
-  common: 'bg-gray-500',
-  uncommon: 'bg-green-500',
-  rare: 'bg-blue-500',
-  epic: 'bg-purple-500',
-  legendary: 'bg-yellow-500',
+const RARITY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  common: { bg: 'bg-gray-500', text: 'text-gray-200', border: 'border-gray-400/50' },
+  uncommon: { bg: 'bg-green-500', text: 'text-green-200', border: 'border-green-400/50' },
+  rare: { bg: 'bg-blue-500', text: 'text-blue-200', border: 'border-blue-400/50' },
+  epic: { bg: 'bg-purple-500', text: 'text-purple-200', border: 'border-purple-400/50' },
+  legendary: { bg: 'bg-yellow-500', text: 'text-yellow-200', border: 'border-yellow-400/50' },
 };
 
 export default function RelicsPage() {
@@ -22,6 +23,7 @@ export default function RelicsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -35,17 +37,17 @@ export default function RelicsPage() {
 
       if (!user) return;
 
-      // Load character
       const { data: charData } = await supabase
         .from('characters')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      // Load relics
-      const { data: relicsData } = await supabase.from('relics').select('*').order('cost', { ascending: true });
+      const { data: relicsData } = await supabase
+        .from('relics')
+        .select('*')
+        .order('cost', { ascending: true });
 
-      // Load inventory
       const { data: invData } = await supabase
         .from('inventory')
         .select('*, relic:relic_id(*)')
@@ -90,6 +92,8 @@ export default function RelicsPage() {
         relic_id: relic.id,
       });
 
+      setPurchaseSuccess(relic.name);
+      setTimeout(() => setPurchaseSuccess(null), 2000);
       await loadData();
     } catch (err: any) {
       setError(err.message || 'Failed to purchase relic');
@@ -103,7 +107,13 @@ export default function RelicsPage() {
       <div className="container-safe">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-white">🎁 Relics Shop</h1>
+          <motion.h1
+            className="text-4xl font-bold text-white"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            🎁 Relics Shop
+          </motion.h1>
           <Link href="/dashboard">
             <Button variant="outline" className="text-white border-white/30 hover:bg-white/10">
               Dashboard
@@ -113,44 +123,86 @@ export default function RelicsPage() {
 
         {/* Gold Display */}
         {character && (
-          <Card className="bg-white/10 border-white/20 backdrop-blur-md text-white mb-8">
-            <CardContent className="py-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-300 text-sm">Available Gold</p>
-                  <p className="text-4xl font-bold text-amber-400">💰 {character.gold}</p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8"
+          >
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md text-white">
+              <CardContent className="py-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-300 text-sm mb-2">Available Gold</p>
+                    <motion.p
+                      className="text-4xl font-bold text-amber-400"
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      💰 {character.gold}
+                    </motion.p>
+                  </div>
+                  <div className="text-6xl opacity-20">🏆</div>
                 </div>
-                <div className="text-6xl">🏆</div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
 
-        {error && <div className="bg-red-500/20 border border-red-500/50 text-red-300 p-4 rounded-lg mb-6">{error}</div>}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="bg-red-500/20 border border-red-500/50 text-red-300 p-4 rounded-lg mb-6"
+          >
+            {error}
+          </motion.div>
+        )}
 
         {/* Inventory */}
-        {inventory.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-6">Your Relics ({inventory.length})</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {inventory.map((item) => (
-                <Card key={item.id} className="bg-white/10 border-white/20 backdrop-blur-md text-white">
-                  <CardContent className="py-6 text-center">
-                    <div className="text-4xl mb-3">{item.relic?.icon || '⭐'}</div>
-                    <h3 className="font-semibold mb-1">{item.relic?.name}</h3>
-                    <p className="text-xs text-gray-400 mb-3">{item.relic?.description}</p>
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium text-white ${RARITY_COLORS[item.relic?.rarity || 'common']}`}>
-                      {item.relic?.rarity}
-                    </span>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {inventory.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-12"
+            >
+              <h2 className="text-2xl font-bold text-white mb-6">Your Relics ({inventory.length})</h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {inventory.map((item, idx) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Card className={`bg-white/10 border-white/20 backdrop-blur-md text-white text-center`}>
+                      <CardContent className="py-6">
+                        <div className="text-5xl mb-3">{item.relic?.icon || '⭐'}</div>
+                        <h3 className="font-semibold text-sm mb-1 line-clamp-2">{item.relic?.name}</h3>
+                        <p className="text-xs text-gray-400 mb-3 line-clamp-1">{item.relic?.description}</p>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium text-white ${
+                            RARITY_COLORS[item.relic?.rarity || 'common'].bg
+                          }`}
+                        >
+                          {item.relic?.rarity}
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Available Relics */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           <h2 className="text-2xl font-bold text-white mb-6">Available Relics</h2>
           {loading ? (
             <div className="text-white text-center py-12">Loading relics...</div>
@@ -162,33 +214,78 @@ export default function RelicsPage() {
             </Card>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {relics.map((relic) => (
-                <Card key={relic.id} className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-all text-white flex flex-col">
-                  <CardContent className="py-6 flex-1">
-                    <div className="text-4xl mb-4 text-center">{relic.icon || '⭐'}</div>
-                    <h3 className="font-semibold text-lg mb-2">{relic.name}</h3>
-                    <p className="text-sm text-gray-300 mb-4 min-h-12">{relic.description}</p>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${RARITY_COLORS[relic.rarity]}`}>
-                        {relic.rarity}
-                      </span>
-                      <span className="text-xl text-amber-400 font-bold">{relic.cost} 💰</span>
-                    </div>
-                  </CardContent>
-                  <CardContent className="py-0 pb-6">
-                    <Button
-                      onClick={() => handlePurchaseRelic(relic)}
-                      disabled={!character || character.gold < relic.cost || purchasing === relic.id}
-                      className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
+              {relics.map((relic, idx) => {
+                const colors = RARITY_COLORS[relic.rarity];
+                const isAffordable = character && character.gold >= relic.cost;
+                const isOwned = inventory.some((i) => i.relic_id === relic.id);
+
+                return (
+                  <motion.div
+                    key={relic.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Card
+                      className={`bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-all text-white flex flex-col h-full ${
+                        !isAffordable && !isOwned ? 'opacity-60' : ''
+                      }`}
                     >
-                      {purchasing === relic.id ? 'Purchasing...' : 'Buy'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                      <CardContent className="py-6 flex-1">
+                        <div className="text-5xl mb-4 text-center">{relic.icon || '⭐'}</div>
+                        <h3 className="font-semibold text-lg mb-2 line-clamp-2">{relic.name}</h3>
+                        <p className="text-sm text-gray-300 mb-4 min-h-12">{relic.description}</p>
+                        <div className="flex items-center justify-between mb-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium text-white ${colors.bg}`}>
+                            {relic.rarity}
+                          </span>
+                          <span className="text-xl text-amber-400 font-bold">{relic.cost} 💰</span>
+                        </div>
+                      </CardContent>
+                      <CardContent className="py-0 pb-6">
+                        {isOwned ? (
+                          <Button disabled className="w-full opacity-50">
+                            ✓ Owned
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handlePurchaseRelic(relic)}
+                            disabled={!isAffordable || purchasing === relic.id}
+                            className={`w-full ${
+                              isAffordable
+                                ? 'bg-amber-600 hover:bg-amber-700'
+                                : 'bg-gray-600 cursor-not-allowed'
+                            }`}
+                          >
+                            {purchasing === relic.id
+                              ? '⏳ Processing...'
+                              : !isAffordable
+                                ? 'Not Enough Gold'
+                                : 'Buy'}
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
-        </div>
+        </motion.div>
+
+        {/* Purchase Success Toast */}
+        <AnimatePresence>
+          {purchaseSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="fixed bottom-8 left-8 right-8 sm:left-auto sm:right-8 sm:w-96 bg-green-500/20 border border-green-400/50 text-green-300 p-4 rounded-lg backdrop-blur-md"
+            >
+              <p className="font-semibold">🎉 {purchaseSuccess} acquired!</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
