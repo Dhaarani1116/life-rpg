@@ -6,9 +6,11 @@ import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createQuest, completeQuest, deleteQuest } from '@/lib/actions/quests';
-import { Quest } from '@/types';
+import { Quest, Character } from '@/types';
 import { motion } from 'framer-motion';
 import { Difficulty, Attribute } from '@/types';
+import { RewardAnimation, LevelUpAnimation } from '@/components/game/animations';
+import { getLevelFromXp, getXpProgress, checkLevelUp } from '@/lib/rpg/progression';
 
 const DIFFICULTIES: Record<Difficulty, { label: string; color: string; icon: string }> = {
   trivial: { label: 'Trivial', color: 'bg-gray-500', icon: '⚪' },
@@ -26,6 +28,7 @@ const ATTRIBUTES: Record<Attribute, { label: string; icon: string; color: string
 };
 
 export default function QuestsPage() {
+  const [character, setCharacter] = useState<Character | null>(null);
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -37,12 +40,19 @@ export default function QuestsPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [showRewardAnimation, setShowRewardAnimation] = useState(false);
+  const [showLevelUpAnimation, setShowLevelUpAnimation] = useState(false);
+  const [rewardData, setRewardData] = useState({ xp: 0, gold: 0, attrXp: 0, attr: 'intellect' as Attribute });
+  const [newLevel, setNewLevel] = useState(0);
 
   useEffect(() => {
-    loadQuests();
+    loadData();
+    const interval = setInterval(loadData, 30000); // Refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
-  async function loadQuests() {
+  async function loadData() {
     try {
       const {
         data: { user },
@@ -50,17 +60,22 @@ export default function QuestsPage() {
 
       if (!user) return;
 
-      const { data, error: fetchError } = await supabase
+      const { data: charData } = await supabase
+        .from('characters')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const { data: questsData } = await supabase
         .from('quests')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (fetchError) throw fetchError;
-      setQuests(data || []);
+      setCharacter(charData);
+      setQuests(questsData || []);
     } catch (err) {
-      console.error('Failed to load quests:', err);
-      setError('Failed to load quests');
+      console.error('Failed to load data:', err);
     } finally {
       setLoading(false);
     }
@@ -75,7 +90,7 @@ export default function QuestsPage() {
       await createQuest(formData);
       setFormData({ title: '', description: '', attribute: 'intellect', difficulty: 'medium' });
       setShowCreateForm(false);
-      await loadQuests();
+      await loadData();
     } catch (err: any) {
       setError(err.message || 'Failed to create quest');
     } finally {
@@ -83,19 +98,51 @@ export default function QuestsPage() {
     }
   }
 
-  async function handleCompleteQuest(questId: string) {
+  async function handleCompleteQuest(quest: Quest) {
+    if (!character) return;
+
+    setCompletingId(quest.id);
+    setError(null);
+
     try {
-      await completeQuest(questId);
-      await loadQuests();
+      const result = await completeQuest(quest.id);
+
+      // Show animations
+      setRewardData({
+        xp: result.xpEarned,
+        gold: result.goldEarned,
+        attrXp: result.attributeXpEarned,
+        attr: quest.attribute as Attribute,
+      });
+      setShowRewardAnimation(true);
+
+      // Check for level up
+      const oldLevel = getLevelFromXp(character.total_xp);
+      const newCharLevel = getLevelFromXp(character.total_xp + result.xpEarned);
+
+      if (newCharLevel > oldLevel) {
+        setTimeout(() => {
+          setNewLevel(newCharLevel);
+          setShowLevelUpAnimation(true);
+        }, 600);
+      }
+
+      // Refresh after animation
+      setTimeout(() => {
+        setShowRewardAnimation(false);
+        setShowLevelUpAnimation(false);
+        loadData();
+      }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to complete quest');
+      setCompletingId(null);
     }
   }
 
   async function handleDeleteQuest(questId: string) {
     try {
       await deleteQuest(questId);
-      await loadQuests();
+      await loadData();
     } catch (err: any) {
       setError(err.message || 'Failed to delete quest');
     }
@@ -107,6 +154,16 @@ export default function QuestsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 sm:p-8">
       <div className="container-safe">
+        {/* Animations */}
+        <RewardAnimation
+          isVisible={showRewardAnimation}
+          xp={rewardData.xp}
+          gold={rewardData.gold}
+          attributeXp={rewardData.attrXp}
+          attributeName={ATTRIBUTES[rewardData.attr].label}
+        />
+        <LevelUpAnimation isVisible={showLevelUpAnimation} newLevel={newLevel} />
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-white">📜 Quests</h1>
@@ -223,7 +280,12 @@ export default function QuestsPage() {
               ) : (
                 <div className="space-y-4">
                   {activeQuests.map((quest, idx) => (
-                    <motion.div key={quest.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}>
+                    <motion.div
+                      key={quest.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
                       <Card className="bg-white/10 border-white/20 backdrop-blur-md hover:bg-white/15 transition-all text-white">
                         <CardContent className="py-6">
                           <div className="flex items-start justify-between gap-4">
@@ -231,11 +293,13 @@ export default function QuestsPage() {
                               <h3 className="text-lg font-semibold mb-2">{quest.title}</h3>
                               {quest.description && <p className="text-gray-300 text-sm mb-3">{quest.description}</p>}
                               <div className="flex items-center gap-3 flex-wrap">
-                                <span className={`text-sm ${ATTRIBUTES[quest.attribute as Attribute].color}`}>
-                                  {ATTRIBUTES[quest.attribute as Attribute].icon} {ATTRIBUTES[quest.attribute as Attribute].label}
+                                <span className={`text-sm ${ATTRIBUTES[quest.attribute as Attribute]?.color}`}>
+                                  {ATTRIBUTES[quest.attribute as Attribute]?.icon}{' '}
+                                  {ATTRIBUTES[quest.attribute as Attribute]?.label}
                                 </span>
                                 <span className="text-sm text-amber-400">
-                                  {DIFFICULTIES[quest.difficulty as Difficulty].icon} {DIFFICULTIES[quest.difficulty as Difficulty].label}
+                                  {DIFFICULTIES[quest.difficulty as Difficulty]?.icon}{' '}
+                                  {DIFFICULTIES[quest.difficulty as Difficulty]?.label}
                                 </span>
                                 <span className="text-sm text-green-400">+{quest.xp_reward} XP</span>
                                 <span className="text-sm text-yellow-400">+{quest.gold_reward} Gold</span>
@@ -243,11 +307,12 @@ export default function QuestsPage() {
                             </div>
                             <div className="flex flex-col gap-2">
                               <Button
-                                onClick={() => handleCompleteQuest(quest.id)}
+                                onClick={() => handleCompleteQuest(quest)}
+                                disabled={completingId === quest.id}
                                 size="sm"
                                 className="bg-green-600 hover:bg-green-700"
                               >
-                                ✓ Complete
+                                {completingId === quest.id ? '⏳' : '✓'} Complete
                               </Button>
                               <Button
                                 onClick={() => handleDeleteQuest(quest.id)}
