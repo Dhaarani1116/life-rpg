@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/quests', label: 'Quests' },
-  { href: '/relics', label: 'Rewards' },
+  { href: '/relics', label: 'Relics' },
   { href: '/character', label: 'Character' },
 ];
 
@@ -56,7 +56,7 @@ function BottomNav() {
   const items = [
     { href: '/dashboard', label: 'Home', icon: '⌂' },
     { href: '/quests', label: 'Quests', icon: '✦' },
-    { href: '/relics', label: 'Rewards', icon: '◆' },
+    { href: '/relics', label: 'Relics', icon: '◆' },
     { href: '/character', label: 'Profile', icon: '●' },
   ];
 

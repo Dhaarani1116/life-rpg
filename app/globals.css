@@ -2,15 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 30 6% 98%;
-    --foreground: 24 10% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 24 10% 10%;
-    --primary: 263 70% 50%;
+    --background: 210 15% 8%;
+    --foreground: 210 20% 90%;
+    --card: 210 15% 12%;
+    --card-foreground: 210 20% 92%;
+    --primary: 210 55% 55%;
     --primary-foreground: 0 0% 100%;
     --secondary: 30 6% 96%;
     --secondary-foreground: 24 10% 10%;
@@ -23,13 +23,13 @@
     --border: 24 6% 91%;
     --input: 24 6% 91%;
     --ring: 263 70% 50%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* Semantic tokens */
-    --xp: 221 83% 53%;
-    --gold: 32 95% 44%;
-    --success: 142 71% 45%;
-    --streak: 24 95% 53%;
+    --xp: 158 70% 55%;
+    --gold: 45 90% 55%;
+    --success: 120 65% 45%;
+    --streak: 30 80% 55%;
   }
 
   * {
