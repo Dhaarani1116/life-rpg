@@ -6,51 +6,61 @@ A full-stack web application built for a hackathon that gamifies personal produc
 
 ## 🎮 Overview
 
-Life RPG turns your to-do list into an adventure. Complete real-world tasks as quests, earn XP and gold, develop your character's attributes, and unlock rewards in the relics shop. Built with modern web technologies and a focus on polish, performance, and accessibility.
+Life RPG turns your to-do list into an adventure. Complete real-world tasks as quests, earn XP and gold, develop your character's attributes, and unlock rewards in the relics shop. Built with modern web technologies and a focus on polish, game feel, performance, and accessibility.
 
-## ✨ Key Features
+## ✨ Core Features
 
-- **Authentic RPG Progression**: Non-linear leveling system with escalating XP requirements
-- **Quest System**: Create, manage, and complete tasks with difficulty scaling
-- **Attribute Development**: Tasks contribute XP to Intellect, Strength, Focus, and Vitality
-- **Streak Tracking**: Daily activity bonus multiplier for consecutive active days
-- **Economy & Rewards**: Earn gold, purchase relics, build your collection
-- **Secure Backend**: Server-side validation, Supabase RLS, no client-side authority
-- **Responsive Design**: Works on desktop, tablet, and mobile with full keyboard navigation
-- **Accessibility**: Semantic HTML, proper labels, ARIA support, high contrast
+- **Dashboard Overview**: Level badge, animated XP bar, active streaks, Gold balance, and recent tasks.
+- **Character Progression**: Non-linear leveling system with escalating XP requirements: `floor(100 * N^1.5)`.
+- **Attribute Development**: Tasks contribute XP to four distinct attributes:
+  - **Intellect** (🧠) — Learning, coding, studying, deep reading
+  - **Strength** (💪) — Physical exercise, fitness, heavy lifting
+  - **Focus** (🎯) — Deep work sessions, meditation, single-tasking
+  - **Vitality** (❤️) — Health, nutrition, sleep, wellness
+- **Daily Streak Multiplier**: Consecutive active days grant an escalating XP bonus multiplier up to +50%.
+- **Today's Adventure**: Focused daily RPG experience highlighting the "Current Mission", an animated completion progress bar, and satisfying "Adventure Complete" celebration.
+- **All Quests Backlog**: Complete task management with difficulty scaling (Trivial, Easy, Medium, Hard, Epic) and attribute tagging.
+- **Atomic Quest Completion**: Server-authoritative PostgreSQL row-locking RPC (`commit_quest_completion`) ensuring secure XP, Gold, and streak updates without client race conditions.
+- **Relic Vault & Economy**: Spend earned Gold on collectible relics spanning 5 rarity tiers (Common to Legendary).
+- **Atomic Relic Purchasing**: Server-side RPC (`purchase_relic`) with pessimistic row locking preventing double-spend and duplicate ownership.
+- **Responsive Navigation**: Adaptive desktop header and dedicated mobile bottom navigation dock.
+- **Route Protection & Auth**: Secure Supabase email/password authentication hardened with Next.js edge middleware.
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS, Framer Motion
-- **Backend**: Next.js Server Actions, Postgres
-- **Database**: Supabase (Auth + PostgreSQL + RLS)
-- **Validation**: Zod
-- **Testing**: Playwright (E2E)
+- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Framer Motion, Lucide Icons
+- **Backend**: Next.js Server Actions, Postgres RPCs (`SECURITY DEFINER`)
+- **Database**: Supabase (PostgreSQL with Row Level Security)
+- **Validation**: Zod & Server-side validation
+- **Testing**: Jest (RPG progression engine and streak calculations)
 
-## 🚀 Getting Started
+## 🚀 Local Setup Guide
 
-### Prerequisites
+Follow these steps to run Life RPG locally:
+
+### 1. Prerequisites
 
 - Node.js 18+
 - npm or yarn
-- Supabase account
+- A Supabase project (free tier works great)
 
-### Installation
-
-1. **Clone and install**
+### 2. Clone and Install Dependencies
 
 ```bash
-cd web_hack
+git clone https://github.com/akhil151/web-hack.git
+cd web-hack
 npm install
 ```
 
-2. **Set up environment variables**
+### 3. Configure Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in your Supabase credentials:
+Copy `.env.example` to `.env.local`:
 
 ```bash
 cp .env.example .env.local
 ```
+
+Fill in your Supabase credentials in `.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -59,233 +69,108 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-3. **Set up Supabase database**
+> **Note**: `.env.local` is strictly ignored by Git and will never be committed.
 
-In your Supabase project:
+### 4. Apply Database Migrations
 
-- Go to **SQL Editor** and run the migration in `supabase/migrations/001_init.sql`
-- This creates all tables with Row Level Security policies
+In your Supabase project dashboard, open the **SQL Editor** and run the migration files located in `supabase/migrations/` in the following exact order:
 
-4. **Enable Email Auth**
+1. `001_init.sql` — Core schema tables (`profiles`, `characters`, `character_attributes`, `quests`, `quest_completions`, `relics`, `inventory`, `daily_activity`) and baseline Row Level Security policies.
+2. `002_seed_relics.sql` — Relic shop catalog across Common, Uncommon, Rare, Epic, and Legendary tiers.
+3. `003_quest_completion_rpc.sql` — **Security-Critical**: Atomic `commit_quest_completion` RPC with row-level locks preventing race conditions and client-side reward manipulation.
+4. `004_secure_relic_purchase.sql` — **Security-Critical**: Unique constraint on inventory ownership and atomic `purchase_relic` RPC with pessimistic Gold locking.
 
-In Supabase > Authentication > Providers, enable Email provider.
+> **Important**: Migrations `003` and `004` must be applied to the database before quest completions and relic purchases can execute.
 
-5. **Run development server**
+### 5. Enable Email Authentication
+
+In your Supabase dashboard under **Authentication > Providers**, enable the **Email** provider.
+
+### 6. Run Automated Tests
+
+Run the deterministic RPG engine test suite:
+
+```bash
+npm test --silent
+```
+
+### 7. Start Development Server
 
 ```bash
 npm run dev
 ```
 
-Visit `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 📱 Project Structure
 
 ```
-src/
 ├── app/                    # Next.js App Router
-│   ├── (auth)/             # Authentication pages
-│   │   ├── login/
-│   │   └── signup/
-│   ├── (game)/             # Authenticated app pages
-│   │   ├── dashboard/
-│   │   ├── quests/
-│   │   ├── relics/
-│   │   └── character/
-│   └── page.tsx            # Landing page
+│   ├── (auth)/             # Auth routes (login, signup)
+│   ├── (game)/             # Protected game routes (dashboard, quests, relics, character)
+│   ├── globals.css         # Design tokens & color system
+│   ├── layout.tsx          # Root layout
+│   └── page.tsx            # Public landing page
 ├── components/
-│   ├── ui/                 # Reusable UI components
-│   └── game/               # RPG-specific components
+│   ├── ui/                 # Core UI primitives (Button, Card)
+│   └── game/               # RPG components (XPBar, RewardBurst, RelicCard, LevelUpOverlay)
 ├── lib/
-│   ├── rpg/                # Progression engine
-│   ├── supabase/           # Auth & DB clients
-│   ├── actions/            # Server actions
-│   └── validators/         # Zod schemas
-├── types/                  # TypeScript types
-└── styles/                 # Global CSS
-
-supabase/
-└── migrations/             # Database schema
+│   ├── actions/            # Server actions (quests, relics)
+│   ├── rpg/                # RPG progression formulas & Jest test suite
+│   └── supabase/           # Client, server, and session handlers
+├── middleware.ts           # Route protection middleware
+├── supabase/
+│   └── migrations/         # PostgreSQL schema & RPC migrations (001 - 004)
+├── types/                  # TypeScript interface definitions
+└── .env.example            # Environment variable template
 ```
 
-## 🎯 Core Gameplay Loop
+## 🏗️ RPG Engine Mechanics
 
-1. **Create a Quest** — Add a real-world task with difficulty (Trivial → Epic)
-2. **Complete the Quest** — Mark it done and instantly:
-   - Gain XP (scaled by difficulty and streak bonus)
-   - Earn Gold
-   - Develop attributes (Intellect, Strength, Focus, Vitality)
-   - Advance toward next level
-3. **Track Progress** — See character level, XP bar, current streak, gold, and attributes
-4. **Spend Gold** — Purchase relics from the shop to customize your collection
-5. **Watch Growth** — Refresh and see all progress persists
-
-## 🏗️ RPG Engine
-
-### Leveling System
-
-**Non-linear progression** with increasing XP requirements per level:
+### Non-Linear Leveling Formula
 
 ```
 XP for level N = floor(100 * N^1.5)
 ```
 
-This creates a smooth difficulty curve where early levels feel rewarding and later levels provide meaningful long-term goals.
+| Level | XP Required (Level) | Cumulative Total XP |
+|-------|---------------------|---------------------|
+| 1     | 100                 | 0                   |
+| 2     | 282                 | 100                 |
+| 3     | 519                 | 382                 |
+| 4     | 800                 | 901                 |
+| 5     | 1,118               | 1,701               |
 
-### Difficulty Scaling
+### Difficulty Rewards
 
-| Difficulty | XP Reward | Gold | Use Case |
-|-----------|-----------|------|----------|
-| Trivial | 25 | 5 | Small tasks |
-| Easy | 50 | 10 | Regular tasks |
-| Medium | 100 | 25 | Standard quests |
-| Hard | 200 | 50 | Challenging work |
-| Epic | 500 | 150 | Major projects |
+| Difficulty | Base XP Reward | Base Gold Reward |
+|------------|----------------|------------------|
+| Trivial    | 25 XP          | 5 Gold           |
+| Easy       | 50 XP          | 10 Gold          |
+| Medium     | 100 XP         | 25 Gold          |
+| Hard       | 200 XP         | 50 Gold          |
+| Epic       | 500 XP         | 150 Gold         |
 
-### Streak Bonus
+### Streak Bonus Multiplier
 
-Consecutive days active grant a bonus:
-- **1 day**: +10% XP
-- **5 days**: +50% XP (capped maximum)
+- **Formula**: `1 + min(streakDays * 0.1, 0.5)`
+- Consecutive daily activity provides up to a **+50% bonus XP** cap.
 
-Breaks only if you miss a day.
+## 🔒 Security Architecture
 
-### Attributes
+- **PostgreSQL Row-Level Locks**: `commit_quest_completion` and `purchase_relic` use `FOR UPDATE` locks on user character and quest rows to guarantee atomicity.
+- **Zero Client Trust**: All rewards, streak increments, and currency deductions are executed within Postgres stored procedures (`SECURITY DEFINER`).
+- **Row Level Security (RLS)**: Users are restricted to querying and mutating only their own rows via `auth.uid()`.
+- **Edge Route Protection**: Middleware intercepts requests to protected routes (`/dashboard`, `/quests`, `/relics`, `/character`), redirecting unauthenticated traffic to `/auth/login`.
 
-Tasks are tagged with one of four attributes:
+## 🚢 Production Deployment Notes
 
-- **Intellect** (🧠) — Learning, coding, studying
-- **Strength** (💪) — Physical exercise, heavy lifting
-- **Focus** (🎯) — Deep work, meditation, concentration
-- **Vitality** (❤️) — Health, running, wellness
+When deploying to a production host (e.g. Vercel, Netlify):
 
-Each attribute accumulates independent XP, tracked separately on the character sheet.
-
-## 🔒 Security
-
-- **No client authority** — XP, levels, currency calculated server-side only
-- **Row Level Security** — All tables protected; users can only access their own data
-- **Validation** — Zod schemas + server-side validation on every mutation
-- **Authorization** — Verified user sessions on protected routes
-- **Authenticated mutations** — All modifications go through server actions
-
-## 🎨 Design System
-
-**Modern RPG × Personal Adventure Journal**
-
-- Deep purple primary (#9333EA)
-- Warm golden secondary (#F59E0B)
-- Attribute-specific accent colors
-- Responsive glassmorphic cards
-- Smooth micro-interactions via Framer Motion
-- Accessible throughout (WCAG 2.1 AA target)
-
-## 📊 Database Schema
-
-```
-profiles              — user identity
-characters           — level, XP, gold, streaks
-character_attributes — attribute XP tracking
-quests               — task definitions
-quest_completions    — completion audit trail
-relics               — reward item catalog
-inventory            — earned items per user
-daily_activity       — streak tracking
-```
-
-All tables use UUID primary keys, timestamp tracking, and Row Level Security policies.
-
-## ✅ Testing
-
-### Manual Testing Checklist
-
-- [ ] Sign up creates character and attributes
-- [ ] Login returns to dashboard
-- [ ] Create quest with various difficulties
-- [ ] Complete quest updates XP, gold, attributes
-- [ ] XP bar animates and reflects progress
-- [ ] Level up triggers celebration
-- [ ] Refresh persists all data
-- [ ] Delete quest (only if incomplete)
-- [ ] Purchase relic with gold
-- [ ] Character page shows full stats
-- [ ] Mobile responsive layout
-- [ ] Keyboard navigation works
-- [ ] No console errors
-
-### Automated Testing (Playwright)
-
-```bash
-npm run test:e2e
-```
-
-Tests the critical path:
-1. Register user
-2. Create quest
-3. Complete quest
-4. Verify XP/gold/attributes update
-5. Refresh page
-6. Verify persistence
-
-## 🚢 Deployment
-
-Build for production:
-
-```bash
-npm run build
-npm start
-```
-
-Deploy to Vercel:
-
-```bash
-vercel deploy
-```
-
-Ensure environment variables are set in Vercel project settings.
-
-## 📝 Architecture Notes
-
-### Why Server Actions?
-
-Server Actions eliminate the need for explicit API routes while providing:
-- Automatic serialization/deserialization
-- Built-in CSRF protection
-- Seamless TypeScript validation
-- Direct database access with security
-
-### Why Non-Linear Leveling?
-
-Early levels feel rewarding (fast progression), while later levels are sustainable (slower, steady growth). This prevents both the "grind wall" of linear systems and the "plateau" of exponential systems.
-
-### Why Separate Attributes?
-
-Instead of a single "XP pool," attributes tie progression to specific life domains, encouraging balanced self-development and adding strategic variety to quest design.
-
-## 🎯 Future Enhancements
-
-- Achievements and badges
-- Leaderboards (optional)
-- Quest templates and presets
-- Social features (optional)
-- Mobile app (React Native)
-- Quest history and stats
-- Import/export progress
-- Customizable attribute names
-- Quest categories and filtering
-
-## 📄 License
-
-Built for hackathon. Adapt and expand as needed.
-
-## 🤝 Contributing
-
-This is a hackathon submission. For improvements or fixes:
-
-1. Create a feature branch
-2. Make focused changes
-3. Test thoroughly
-4. Submit PR with clear description
-
----
-
-**Ready to start your adventure?** [Sign up and begin your first quest →](https://localhost:3000/auth/signup)
+1. Set the root directory if deploying from a subfolder.
+2. In the hosting dashboard's Environment Variables settings, configure:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_APP_URL`
+3. Ensure all migrations (`001_init.sql` through `004_secure_relic_purchase.sql`) are executed on your production Supabase database.
