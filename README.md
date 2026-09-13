@@ -2,6 +2,12 @@
 
 **Transform your daily tasks into an epic role-playing game.**
 
+[![Live Demo](https://img.shields.io/badge/Live_App-life--rpg--six--theta.vercel.app-000000?style=for-the-badge&logo=vercel)](https://life-rpg-six-theta.vercel.app)
+[![GitHub](https://img.shields.io/badge/GitHub-Dhaarani1116%2Flife--rpg-blue?style=for-the-badge&logo=github)](https://github.com/Dhaarani1116/life-rpg)
+
+- **Live Deployed App**: [https://life-rpg-six-theta.vercel.app](https://life-rpg-six-theta.vercel.app)
+- **GitHub Repository**: [https://github.com/Dhaarani1116/life-rpg](https://github.com/Dhaarani1116/life-rpg)
+
 A full-stack web application built for a hackathon that gamifies personal productivity through quest completion, character progression, and attribute-based rewards.
 
 ## 🎮 Overview
@@ -47,8 +53,8 @@ Follow these steps to run Life RPG locally:
 ### 2. Clone and Install Dependencies
 
 ```bash
-git clone https://github.com/akhil151/web-hack.git
-cd web-hack
+git clone https://github.com/Dhaarani1116/life-rpg.git
+cd life-rpg
 npm install
 ```
 
