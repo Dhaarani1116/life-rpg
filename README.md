@@ -10,6 +10,13 @@
 
 A full-stack web application built for a hackathon that gamifies personal productivity through quest completion, character progression, and attribute-based rewards.
 
+## 📝 Submission Remarks
+
+> **Note to Judges**:
+> - **Updated Live URL**: The live application is deployed at [https://life-rpg-six-theta.vercel.app](https://life-rpg-six-theta.vercel.app).
+> - **Updated Repository**: Migrated to the official public GitHub repository [https://github.com/Dhaarani1116/life-rpg](https://github.com/Dhaarani1116/life-rpg).
+> - **Resubmitted Walkthrough Video**: The updated walkthrough video demonstrating signup, quest creation, completion (+200 XP), level up overlay, relic purchases, and Supabase persistence has been resubmitted.
+
 ## 🎮 Overview
 
 Life RPG turns your to-do list into an adventure. Complete real-world tasks as quests, earn XP and gold, develop your character's attributes, and unlock rewards in the relics shop. Built with modern web technologies and a focus on polish, game feel, performance, and accessibility.
