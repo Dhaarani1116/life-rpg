@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { getServerSupabaseClient } from '@/lib/supabase/server';
 import { Relic } from '@/types';
 
 /**
@@ -10,6 +10,7 @@ import { Relic } from '@/types';
  * @throws Error with a friendly message if the RPC fails.
  */
 export async function purchaseRelic(relicId: string) {
+  const supabase = await getServerSupabaseClient();
   const { data, error } = await supabase.rpc('purchase_relic', { p_relic_id: relicId });
   if (error) {
     // Translate DB error messages to user‑friendly messages
