@@ -36,11 +36,35 @@ export default function RelicsPage() {
 
       if (!user) return;
 
-      const { data: charData } = await supabase
+      let { data: charData } = await supabase
         .from('characters')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (!charData) {
+        await supabase
+          .from('profiles')
+          .upsert({ id: user.id, display_name: user.email?.split('@')[0] || 'Adventurer' }, { onConflict: 'id' });
+
+        const { data: newChar } = await supabase
+          .from('characters')
+          .insert({ user_id: user.id })
+          .select()
+          .maybeSingle();
+
+        if (newChar) {
+          charData = newChar;
+          const attributesList = ['intellect', 'strength', 'focus', 'vitality'];
+          await supabase.from('character_attributes').insert(
+            attributesList.map((attr) => ({
+              character_id: newChar.id,
+              attribute: attr,
+              xp: 0,
+            }))
+          );
+        }
+      }
 
       const { data: relicsData } = await supabase
         .from('relics')
@@ -77,8 +101,8 @@ export default function RelicsPage() {
       if (error) {
         setError(error.message || 'Failed to purchase item');
       } else {
-        const result = data[0];
-        setPurchaseSuccess(result.relic_name);
+        const result = Array.isArray(data) ? data[0] : data;
+        setPurchaseSuccess(result?.relic_name || relic.name);
         setTimeout(() => setPurchaseSuccess(null), 2500);
         await loadData();
       }
