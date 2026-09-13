@@ -92,11 +92,35 @@ export default function QuestsPage() {
 
       if (!user) return;
 
-      const { data: charData } = await supabase
+      let { data: charData } = await supabase
         .from('characters')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (!charData) {
+        await supabase
+          .from('profiles')
+          .upsert({ id: user.id, display_name: user.email?.split('@')[0] || 'Adventurer' }, { onConflict: 'id' });
+
+        const { data: newChar } = await supabase
+          .from('characters')
+          .insert({ user_id: user.id })
+          .select()
+          .maybeSingle();
+
+        if (newChar) {
+          charData = newChar;
+          const attributesList = ['intellect', 'strength', 'focus', 'vitality'];
+          await supabase.from('character_attributes').insert(
+            attributesList.map((attr) => ({
+              character_id: newChar.id,
+              attribute: attr,
+              xp: 0,
+            }))
+          );
+        }
+      }
 
       const { data: questsData } = await supabase
         .from('quests')
@@ -119,7 +143,24 @@ export default function QuestsPage() {
     setError(null);
 
     try {
-      await createQuest(formData);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const xpReward = formData.difficulty === 'trivial' ? 25 : formData.difficulty === 'easy' ? 50 : formData.difficulty === 'medium' ? 100 : formData.difficulty === 'hard' ? 200 : 500;
+      const goldReward = formData.difficulty === 'trivial' ? 5 : formData.difficulty === 'easy' ? 10 : formData.difficulty === 'medium' ? 25 : formData.difficulty === 'hard' ? 50 : 150;
+
+      const { error: insertError } = await supabase.from('quests').insert({
+        user_id: user.id,
+        title: formData.title,
+        description: formData.description,
+        attribute: formData.attribute,
+        difficulty: formData.difficulty,
+        xp_reward: xpReward,
+        gold_reward: goldReward,
+      });
+
+      if (insertError) throw new Error(insertError.message);
+
       setFormData({ title: '', description: '', attribute: 'intellect', difficulty: 'medium' });
       setShowCreateForm(false);
       await loadData();
@@ -137,18 +178,28 @@ export default function QuestsPage() {
     setError(null);
 
     try {
-      const result = await completeQuest(quest.id);
+      const { data: rpcData, error: rpcError } = await supabase.rpc('commit_quest_completion', {
+        p_quest_id: quest.id,
+      });
+
+      if (rpcError) {
+        throw new Error(rpcError.message);
+      }
+
+      const xpEarned = rpcData.xp_earned;
+      const goldEarned = rpcData.gold_earned;
+      const attributeXpEarned = rpcData.attribute_xp_earned;
 
       setRewardData({
-        xp: result.xpEarned,
-        gold: result.goldEarned,
-        attrXp: result.attributeXpEarned,
+        xp: xpEarned,
+        gold: goldEarned,
+        attrXp: attributeXpEarned,
         attr: quest.attribute as Attribute,
       });
       setShowRewardAnimation(true);
 
       const oldLevel = getLevelFromXp(character.total_xp);
-      const newCharLevel = getLevelFromXp(character.total_xp + result.xpEarned);
+      const newCharLevel = getLevelFromXp(character.total_xp + xpEarned);
 
       if (newCharLevel > oldLevel) {
         setTimeout(() => {
@@ -170,7 +221,8 @@ export default function QuestsPage() {
 
   async function handleDeleteQuest(questId: string) {
     try {
-      await deleteQuest(questId);
+      const { error: deleteErr } = await supabase.from('quests').delete().eq('id', questId);
+      if (deleteErr) throw new Error(deleteErr.message);
       await loadData();
     } catch (err: any) {
       setError(err.message || 'Failed to delete quest');
