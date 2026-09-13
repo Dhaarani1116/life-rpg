@@ -14,6 +14,10 @@ create policy "Users can view their own profile"
   on profiles for select
   using (auth.uid() = id);
 
+create policy "Users can insert their own profile"
+  on profiles for insert
+  with check (auth.uid() = id);
+
 create policy "Users can update their own profile"
   on profiles for update
   using (auth.uid() = id);
@@ -38,6 +42,10 @@ create policy "Users can view their own character"
   on characters for select
   using (auth.uid() = user_id);
 
+create policy "Users can insert their own character"
+  on characters for insert
+  with check (auth.uid() = user_id);
+
 create policy "Users can update their own character"
   on characters for update
   using (auth.uid() = user_id);
@@ -55,6 +63,14 @@ alter table character_attributes enable row level security;
 
 create policy "Users can view their own attributes"
   on character_attributes for select
+  using (auth.uid() = (select user_id from characters where id = character_id));
+
+create policy "Users can insert their own attributes"
+  on character_attributes for insert
+  with check (auth.uid() = (select user_id from characters where id = character_id));
+
+create policy "Users can update their own attributes"
+  on character_attributes for update
   using (auth.uid() = (select user_id from characters where id = character_id));
 
 -- Quests

@@ -10,7 +10,7 @@ export default async function GameLayout({
   const user = await getUserFromSession();
 
   if (!user) {
-    redirect('/auth/login');
+    redirect('/login');
   }
 
   return <GameNavShell>{children}</GameNavShell>;

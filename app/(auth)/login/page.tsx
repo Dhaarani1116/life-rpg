@@ -20,17 +20,25 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        setError(signInError.message);
+        if (signInError.message.includes('Invalid login credentials')) {
+          setError('No account found or invalid password. If you haven\'t signed up yet, click "Sign up" below.');
+        } else {
+          setError(signInError.message);
+        }
         return;
       }
 
-      router.push('/dashboard');
+      if (data.session) {
+        document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=604800; SameSite=Lax`;
+      }
+
+      window.location.href = '/dashboard';
     } catch {
       setError('An unexpected error occurred');
     } finally {
@@ -78,7 +86,7 @@ export default function LoginPage() {
           </form>
           <p className="text-center text-xs text-muted-foreground mt-4">
             Don't have an account?{' '}
-            <Link href="/auth/signup" className="text-primary hover:underline">
+            <Link href="/signup" className="text-primary hover:underline">
               Sign up
             </Link>
           </p>

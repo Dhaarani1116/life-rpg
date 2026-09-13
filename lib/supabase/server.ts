@@ -26,17 +26,15 @@ export async function getUserFromSession() {
     throw new Error('Missing Supabase credentials');
   }
 
-  const client = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        cookie: cookieStore.toString(),
-      },
-    },
-  });
+  const token = cookieStore.get('sb-access-token')?.value;
+  if (!token) {
+    return null;
+  }
 
+  const client = createClient(supabaseUrl, supabaseAnonKey);
   const {
     data: { user },
-  } = await client.auth.getUser();
+  } = await client.auth.getUser(token);
 
   return user;
 }

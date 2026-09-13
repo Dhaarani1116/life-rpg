@@ -40,7 +40,10 @@ function TopNav() {
           </nav>
         </div>
         <button
-          onClick={() => supabase.auth.signOut().then(() => window.location.href = '/auth/login')}
+          onClick={() => {
+            document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax';
+            supabase.auth.signOut().then(() => window.location.href = '/login');
+          }}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           Sign out

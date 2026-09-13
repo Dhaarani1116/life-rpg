@@ -36,6 +36,10 @@ export default function SignupPage() {
         return;
       }
 
+      if (data.session) {
+        document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=604800; SameSite=Lax`;
+      }
+
       const { error: profileError } = await supabase.from('profiles').insert({
         id: data.user.id,
         display_name: displayName,
@@ -69,7 +73,7 @@ export default function SignupPage() {
         return;
       }
 
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch {
       setError('An unexpected error occurred');
     } finally {
@@ -128,7 +132,7 @@ export default function SignupPage() {
           </form>
           <p className="text-center text-xs text-muted-foreground mt-4">
             Already have an account?{' '}
-            <Link href="/auth/login" className="text-primary hover:underline">
+            <Link href="/login" className="text-primary hover:underline">
               Sign in
             </Link>
           </p>

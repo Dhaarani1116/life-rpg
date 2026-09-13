@@ -161,7 +161,7 @@ XP for level N = floor(100 * N^1.5)
 - **PostgreSQL Row-Level Locks**: `commit_quest_completion` and `purchase_relic` use `FOR UPDATE` locks on user character and quest rows to guarantee atomicity.
 - **Zero Client Trust**: All rewards, streak increments, and currency deductions are executed within Postgres stored procedures (`SECURITY DEFINER`).
 - **Row Level Security (RLS)**: Users are restricted to querying and mutating only their own rows via `auth.uid()`.
-- **Edge Route Protection**: Middleware intercepts requests to protected routes (`/dashboard`, `/quests`, `/relics`, `/character`), redirecting unauthenticated traffic to `/auth/login`.
+- **Edge Route Protection**: Middleware intercepts requests to protected routes (`/dashboard`, `/quests`, `/relics`, `/character`), redirecting unauthenticated traffic to `/login`.
 
 ## 🚢 Production Deployment Notes
 

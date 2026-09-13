@@ -36,28 +36,54 @@ export default function DashboardPage() {
 
       if (!user) return;
 
-      const { data: charData } = await supabase
+      let { data: charData } = await supabase
         .from('characters')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      const { data: attrData } = await supabase
-        .from('character_attributes')
-        .select('*')
-        .eq('character_id', charData?.id);
+      if (!charData) {
+        await supabase
+          .from('profiles')
+          .upsert({ id: user.id, display_name: user.email?.split('@')[0] || 'Adventurer' }, { onConflict: 'id' });
 
-      const { data: questsData } = await supabase
-        .from('quests')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_completed', false)
-        .order('created_at', { ascending: false })
-        .limit(3);
+        const { data: newChar } = await supabase
+          .from('characters')
+          .insert({ user_id: user.id })
+          .select()
+          .maybeSingle();
 
-      setCharacter(charData);
-      setAttributes(attrData || []);
-      setRecentQuests(questsData || []);
+        if (newChar) {
+          charData = newChar;
+          const attributesList = ['intellect', 'strength', 'focus', 'vitality'];
+          await supabase.from('character_attributes').insert(
+            attributesList.map((attr) => ({
+              character_id: newChar.id,
+              attribute: attr,
+              xp: 0,
+            }))
+          );
+        }
+      }
+
+      if (charData) {
+        const { data: attrData } = await supabase
+          .from('character_attributes')
+          .select('*')
+          .eq('character_id', charData.id);
+
+        const { data: questsData } = await supabase
+          .from('quests')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_completed', false)
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        setCharacter(charData);
+        setAttributes(attrData || []);
+        setRecentQuests(questsData || []);
+      }
     } catch (err) {
       console.error('Failed to load dashboard:', err);
     } finally {
