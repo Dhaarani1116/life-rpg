@@ -10,6 +10,8 @@ BEGIN
   END IF;
 END$$;
 
+DROP FUNCTION IF EXISTS public.purchase_relic(UUID);
+
 CREATE OR REPLACE FUNCTION public.purchase_relic(
   p_relic_id UUID,
   OUT relic_id UUID,
